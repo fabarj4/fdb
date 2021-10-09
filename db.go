@@ -141,7 +141,7 @@ func (t *Table) Get(db QueryExecer, item interface{}) error {
 }
 
 //Gets : fungsi ini digunakan untuk mengambil data seluruh tabel
-func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}, string, error) {
+func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}, *Cursor, error) {
 	var kolom = []string{}
 	var args []interface{}
 	var addOnsQuery []string
@@ -172,11 +172,11 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 			addOnsQuery = append(addOnsQuery, fmt.Sprintf(" LIMIT %s OFFSET %s", c.Limit, c.Offset))
 			limitInt, err := strconv.Atoi(c.Limit)
 			if err != nil {
-				return nil, "", err
+				return nil, c, err
 			}
 			offsetInt, err := strconv.Atoi(c.Offset)
 			if err != nil {
-				return nil, "", err
+				return nil, c, err
 			}
 			offsetInt += limitInt
 			c.Offset = fmt.Sprintf("%v", offsetInt)
@@ -186,7 +186,7 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 
 	data, err := db.Query(query, args...)
 	if err != nil {
-		return nil, "", err
+		return nil, c, err
 	}
 	defer data.Close()
 	var result []interface{}
@@ -194,18 +194,18 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 	for data.Next() {
 		temp := Clone(item)
 		if err := t.getArgs(temp, false); err != nil {
-			return nil, "", err
+			return nil, c, err
 		}
 		if err = data.Scan(t.DstFields...); err != nil {
-			return nil, "", err
+			return nil, c, err
 		}
 		result = append(result, temp)
 	}
 
 	if err = data.Err(); err != nil {
-		return nil, "", err
+		return nil, c, err
 	}
-	return result, "", nil
+	return result, c, nil
 	// return nil, nil
 }
 
