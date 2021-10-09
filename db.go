@@ -17,37 +17,21 @@ type QueryExecer interface {
 
 type Database struct {
 	Dbname    string
-	Dbtest    string
 	Dropfirst bool
 }
 
 func (d Database) Init(db *sql.DB) error {
 	// check apakah database sudah dibuat
-	// exists := false
-	// query := fmt.Sprintf("select exists(SELECT datname FROM pg_catalog.pg_database WHERE lower(%s) = lower('%s'));", d.Dbtest, d.Dbtest)
-	// if err := db.QueryRow(query).Scan(&exists); err != nil {
-	// 	return err
-	// }
-	if d.Dropfirst {
-		query := fmt.Sprintf("DROP DATABASE %s", d.Dbtest)
-		if _, err := db.Exec(query); err != nil {
-			return err
-		}
+	exists := false
+	query := fmt.Sprintf("select exists(SELECT datname FROM pg_catalog.pg_database WHERE lower(datname) = lower('%s'));", d.Dbname)
+	if err := db.QueryRow(query).Scan(&exists); err != nil {
+		return err
 	}
-	// exists = false
-	// query = fmt.Sprintf("select exists(SELECT datname FROM pg_catalog.pg_database WHERE lower(%s) = lower('%s'));", d.Dbname, d.Dbname)
-	// if err := db.QueryRow(query).Scan(&exists); err != nil {
-	// 	return err
-	// }
-	if d.Dropfirst {
+	if d.Dropfirst && exists {
 		query := fmt.Sprintf("DROP DATABASE %s", d.Dbname)
 		if _, err := db.Exec(query); err != nil {
 			return err
 		}
-	}
-	query := fmt.Sprintf("CREATE DATABASE %s", d.Dbtest)
-	if _, err := db.Exec(query); err != nil {
-		return err
 	}
 	query = fmt.Sprintf("CREATE DATABASE %s", d.Dbname)
 	if _, err := db.Exec(query); err != nil {

@@ -15,8 +15,7 @@ type Dummy struct {
 
 func TestDB(t *testing.T) {
 	database := &Database{
-		Dbname:    "fdb",
-		Dbtest:    "test_fdb",
+		Dbname:    "test_fdb",
 		Dropfirst: true,
 	}
 
@@ -71,7 +70,7 @@ func TestDB(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, item := range temp {
-			if err = tbl.Insert(db, item); err != nil {
+			if err = tbl.Insert(tx, item); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -89,7 +88,7 @@ func TestDB(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := tbl.Update(db, temp[0], du); err != nil {
+		if err := tbl.Update(tx, temp[0], du); err != nil {
 			t.Fatal(err)
 		}
 		if err := tx.Commit(); err != nil {
@@ -143,7 +142,7 @@ func TestDB(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, item := range temp {
-			if err = tbl.Delete(db, item); err != nil {
+			if err = tbl.Delete(tx, item); err != nil {
 				t.Fatal(err)
 			}
 		}
