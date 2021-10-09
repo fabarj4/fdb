@@ -9,6 +9,12 @@ import (
 	"strings"
 )
 
+type QueryExecer interface {
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+	Exec(query string, args ...interface{}) (sql.Result, error)
+}
+
 type Database struct {
 	Dbname    string
 	Dbtest    string
@@ -70,7 +76,7 @@ func Connect(user, password, dbName string) (*sql.DB, error) {
 }
 
 //Insert : fungsi ini digunakan untuk memasukan data ke Table
-func (t *Table) Insert(db *sql.DB, item interface{}) error {
+func (t *Table) Insert(db QueryExecer, item interface{}) error {
 
 	if t.AutoIncrement && t.ReturningID {
 		if err := t.getArgs(item, true); err != nil {
@@ -91,7 +97,7 @@ func (t *Table) Insert(db *sql.DB, item interface{}) error {
 }
 
 //Delete : fungsi ini digunakan untuk menghapus data ke Table
-func (t *Table) Delete(db *sql.DB, item interface{}) error {
+func (t *Table) Delete(db QueryExecer, item interface{}) error {
 	if err := t.getArgs(item, false); err != nil {
 		return err
 	}
@@ -101,7 +107,7 @@ func (t *Table) Delete(db *sql.DB, item interface{}) error {
 }
 
 //Update : fungsi ini digunakan untuk mengubah data ke Table
-func (t *Table) Update(db *sql.DB, item interface{}, data map[string]interface{}) error {
+func (t *Table) Update(db QueryExecer, item interface{}, data map[string]interface{}) error {
 	if err := t.getArgs(item, false); err != nil {
 		return err
 	}
@@ -122,7 +128,7 @@ func (t *Table) Update(db *sql.DB, item interface{}, data map[string]interface{}
 }
 
 //Get : fungsi ini digunakan untuk mengambil data berdasarkan primary key
-func (t *Table) Get(db *sql.DB, item interface{}) error {
+func (t *Table) Get(db QueryExecer, item interface{}) error {
 	if err := t.getArgs(item, false); err != nil {
 		return err
 	}
@@ -135,7 +141,7 @@ func (t *Table) Get(db *sql.DB, item interface{}) error {
 }
 
 //Gets : fungsi ini digunakan untuk mengambil data seluruh tabel
-func (t *Table) Gets(db *sql.DB, item interface{}, c *Cursor) ([]interface{}, string, error) {
+func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}, string, error) {
 	var kolom = []string{}
 	var args []interface{}
 	var addOnsQuery []string

@@ -66,10 +66,17 @@ func TestDB(t *testing.T) {
 	})
 
 	t.Run("test insert table", func(t *testing.T) {
+		tx, err := db.Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
 		for _, item := range temp {
 			if err = tbl.Insert(db, item); err != nil {
 				t.Fatal(err)
 			}
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatal(err)
 		}
 	})
 
@@ -78,7 +85,14 @@ func TestDB(t *testing.T) {
 			"password": "asd",
 			"username": "asd2",
 		}
+		tx, err := db.Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
 		if err := tbl.Update(db, temp[0], du); err != nil {
+			t.Fatal(err)
+		}
+		if err := tx.Commit(); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -124,10 +138,17 @@ func TestDB(t *testing.T) {
 	})
 
 	t.Run("test delete table", func(t *testing.T) {
+		tx, err := db.Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
 		for _, item := range temp {
 			if err = tbl.Delete(db, item); err != nil {
 				t.Fatal(err)
 			}
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatal(err)
 		}
 	})
 }
