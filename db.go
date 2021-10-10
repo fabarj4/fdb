@@ -130,6 +130,7 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 	var args []interface{}
 	var addOnsQuery []string
 	var resultCursor string
+	defultSort := fmt.Sprintf(" ORDER BY %s ASC", t.PrimaryKey)
 	// var cursorData []string
 
 	// var filter, sort, offset, limit string
@@ -152,6 +153,10 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 				temp = append(temp, v)
 			}
 			addOnsQuery = append(addOnsQuery, fmt.Sprintf(" ORDER BY %s", strings.Join(temp, ",")))
+			defultSort = ""
+		} else {
+			addOnsQuery = append(addOnsQuery, fmt.Sprintf(" ORDER BY %s ASC", t.PrimaryKey))
+			defultSort = ""
 		}
 		if c.Limit != "" {
 			limitInt, err := strconv.Atoi(c.Limit)
@@ -165,13 +170,18 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 			if err != nil {
 				return nil, "", err
 			}
+			addOnsQuery = append(addOnsQuery, fmt.Sprintf(" LIMIT %s OFFSET %s", c.Limit, c.Offset))
 			offsetInt += limitInt
 			c.Offset = fmt.Sprintf("%v", offsetInt)
-			addOnsQuery = append(addOnsQuery, fmt.Sprintf(" LIMIT %s OFFSET %s", c.Limit, c.Offset))
 		}
 		resultCursor = c.SetCursor()
 	}
-	query := fmt.Sprintf("SELECT * FROM %s %s", t.Name, strings.Join(addOnsQuery, " "))
+	var query string
+	if defultSort != "" {
+		query = fmt.Sprintf("SELECT * FROM %s %s", t.Name, defultSort)
+	} else {
+		query = fmt.Sprintf("SELECT * FROM %s %s", t.Name, strings.Join(addOnsQuery, " "))
+	}
 	data, err := db.Query(query, args...)
 	if err != nil {
 		return nil, "", err

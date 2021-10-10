@@ -72,7 +72,7 @@ func (c *Cursor) GetCursor(data string) error {
 		c.Limit = items[2]
 	}
 	if items[3] != "null" {
-		c.Limit = items[3]
+		c.Offset = items[3]
 	}
 	return nil
 }
