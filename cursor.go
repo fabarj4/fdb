@@ -2,7 +2,6 @@ package fdb
 
 import (
 	"encoding/base64"
-	"fmt"
 	"strings"
 )
 
@@ -13,20 +12,45 @@ type Cursor struct {
 	Offset  string
 }
 
+func MapToCursor(item map[string]interface{}) *Cursor {
+	result := &Cursor{}
+	if item, ok := item["filters"]; ok {
+		result.Filters = item.(string)
+	}
+	if item, ok := item["sort"]; ok {
+		result.Sort = item.(string)
+	}
+	if item, ok := item["limit"]; ok {
+		result.Limit = item.(string)
+	}
+	if item, ok := item["offset"]; ok {
+		result.Offset = item.(string)
+	}
+	return result
+}
+
 func (c *Cursor) SetCursor() string {
 	var result string
 	temp := []string{}
 	if c.Filters != "" {
 		temp = append(temp, c.Filters)
+	} else {
+		temp = append(temp, "null")
 	}
 	if c.Sort != "" {
 		temp = append(temp, c.Sort)
+	} else {
+		temp = append(temp, "null")
 	}
 	if c.Limit != "" {
 		temp = append(temp, c.Limit)
+	} else {
+		temp = append(temp, "null")
 	}
 	if c.Offset != "" {
 		temp = append(temp, c.Offset)
+	} else {
+		temp = append(temp, "null")
 	}
 	result = base64.StdEncoding.EncodeToString([]byte(strings.Join(temp, "&")))
 	return result
@@ -38,20 +62,17 @@ func (c *Cursor) GetCursor(data string) error {
 		return err
 	}
 	items := strings.Split(string(temp), "&")
-	fmt.Println(items)
-	for _, item := range items {
-		if strings.Contains(item, "filters") {
-			c.Filters = item
-		}
-		if strings.Contains(item, "sort") {
-			c.Sort = item
-		}
-		if strings.Contains(item, "limit") {
-			c.Limit = item
-		}
-		if strings.Contains(item, "offset") {
-			c.Offset = item
-		}
+	if items[0] != "null" {
+		c.Filters = items[0]
+	}
+	if items[1] != "null" {
+		c.Sort = items[1]
+	}
+	if items[2] != "null" {
+		c.Limit = items[2]
+	}
+	if items[3] != "null" {
+		c.Limit = items[3]
 	}
 	return nil
 }

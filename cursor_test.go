@@ -7,11 +7,11 @@ import (
 
 func TestCursor(t *testing.T) {
 	cursor := &Cursor{
-		Filters: "filters=coba,=,1",
-		Sort:    "sort=id ASC",
-		Limit:   "limit=5",
+		Filters: "coba,=,1",
+		Sort:    "id ASC",
+		Limit:   "5",
 	}
-	cursorString := "ZmlsdGVycz1jb2JhLD0sMSZzb3J0PWlkIEFTQyZsaW1pdD01"
+	cursorString := "Y29iYSw9LDEmaWQgQVNDJjUmbnVsbA=="
 	t.Run("Test set Cursor", func(t *testing.T) {
 		result := cursor.SetCursor()
 		fmt.Println(result)
@@ -24,6 +24,7 @@ func TestCursor(t *testing.T) {
 		if err := temp.GetCursor(cursorString); err != nil {
 			t.Fatalf("hasil output tidak sesuai")
 		}
+		fmt.Println(temp)
 		if temp.Filters != cursor.Filters {
 			t.Fatalf("hasil output tidak sesuai got : %s want :%s", temp.Filters, cursor.Filters)
 		}
