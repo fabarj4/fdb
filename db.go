@@ -129,6 +129,7 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 	var kolom = []string{}
 	var args []interface{}
 	var addOnsQuery []string
+	var resultCursor string
 	// var cursorData []string
 
 	// var filter, sort, offset, limit string
@@ -168,6 +169,7 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 			c.Offset = fmt.Sprintf("%v", offsetInt)
 			addOnsQuery = append(addOnsQuery, fmt.Sprintf(" LIMIT %s OFFSET %s", c.Limit, c.Offset))
 		}
+		resultCursor = c.SetCursor()
 	}
 	query := fmt.Sprintf("SELECT * FROM %s %s", t.Name, strings.Join(addOnsQuery, " "))
 	data, err := db.Query(query, args...)
@@ -192,7 +194,7 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 		return nil, "", err
 	}
 
-	return result, c.SetCursor(), nil
+	return result, resultCursor, nil
 	// return nil, nil
 }
 
