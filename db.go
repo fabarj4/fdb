@@ -125,7 +125,7 @@ func (t *Table) Get(db QueryExecer, item interface{}) error {
 }
 
 //Gets : fungsi ini digunakan untuk mengambil data seluruh tabel
-func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}, *Cursor, error) {
+func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}, string, error) {
 	var kolom = []string{}
 	var args []interface{}
 	var addOnsQuery []string
@@ -155,14 +155,14 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 		if c.Limit != "" {
 			limitInt, err := strconv.Atoi(c.Limit)
 			if err != nil {
-				return nil, c, err
+				return nil, "", err
 			}
 			if c.Offset == "" {
 				c.Offset = "0"
 			}
 			offsetInt, err := strconv.Atoi(c.Offset)
 			if err != nil {
-				return nil, c, err
+				return nil, "", err
 			}
 			offsetInt += limitInt
 			c.Offset = fmt.Sprintf("%v", offsetInt)
@@ -172,7 +172,7 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 	query := fmt.Sprintf("SELECT * FROM %s %s", t.Name, strings.Join(addOnsQuery, " "))
 	data, err := db.Query(query, args...)
 	if err != nil {
-		return nil, c, err
+		return nil, "", err
 	}
 	defer data.Close()
 	var result []interface{}
@@ -180,18 +180,19 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 	for data.Next() {
 		temp := Clone(item)
 		if err := t.getArgs(temp, false); err != nil {
-			return nil, c, err
+			return nil, "", err
 		}
 		if err = data.Scan(t.DstFields...); err != nil {
-			return nil, c, err
+			return nil, "", err
 		}
 		result = append(result, temp)
 	}
 
 	if err = data.Err(); err != nil {
-		return nil, c, err
+		return nil, "", err
 	}
-	return result, c, nil
+
+	return result, c.SetCursor(), nil
 	// return nil, nil
 }
 
