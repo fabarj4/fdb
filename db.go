@@ -182,7 +182,6 @@ func (t *Table) Gets(db QueryExecer, schema string, item interface{}, c *Cursor)
 	} else {
 		query = fmt.Sprintf("SELECT * FROM %s %s", t.tableName(schema), strings.Join(addOnsQuery, " "))
 	}
-	fmt.Println(query)
 	data, err := db.Query(query, args...)
 	if err != nil {
 		return nil, "", err
