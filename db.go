@@ -206,7 +206,6 @@ func (t *Table) Gets(db QueryExecer, schema string, item interface{}, c *Cursor)
 	}
 
 	return result, resultCursor, nil
-	// return nil, nil
 }
 
 // Clone : fungsi ini untuk menduplikat variable dengan alamat memori yang berbeda
