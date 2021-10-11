@@ -226,7 +226,8 @@ func TestDB(t *testing.T) {
 
 	t.Run("test gets schema table with params sort", func(t *testing.T) {
 		cursor := Cursor{
-			Sort: "id DESC",
+			Sort:  "id DESC",
+			Limit: "2",
 		}
 		temp := &Dummy{}
 		data, _, err := tbl.Gets(db, schema, temp, &cursor)

@@ -167,10 +167,10 @@ func (t *Table) Gets(db QueryExecer, schema string, item interface{}, c *Cursor)
 				c.Offset = "0"
 			}
 			offsetInt, err := strconv.Atoi(c.Offset)
+			addOnsQuery = append(addOnsQuery, fmt.Sprintf(" LIMIT %s OFFSET %s", c.Limit, c.Offset))
 			if err != nil {
 				return nil, "", err
 			}
-			addOnsQuery = append(addOnsQuery, fmt.Sprintf(" LIMIT %s OFFSET %s", c.Limit, c.Offset))
 			offsetInt += limitInt
 			c.Offset = fmt.Sprintf("%v", offsetInt)
 		}
@@ -182,6 +182,7 @@ func (t *Table) Gets(db QueryExecer, schema string, item interface{}, c *Cursor)
 	} else {
 		query = fmt.Sprintf("SELECT * FROM %s %s", t.tableName(schema), strings.Join(addOnsQuery, " "))
 	}
+	fmt.Println(query)
 	data, err := db.Query(query, args...)
 	if err != nil {
 		return nil, "", err
