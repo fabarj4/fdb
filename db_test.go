@@ -70,7 +70,7 @@ func TestDB(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, item := range temp {
-			if err = tbl.Insert(tx, item); err != nil {
+			if err = tbl.Insert(tx, "", item); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -88,7 +88,7 @@ func TestDB(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := tbl.Update(tx, temp[0], du); err != nil {
+		if err := tbl.Update(tx, "", temp[0], du); err != nil {
 			t.Fatal(err)
 		}
 		if err := tx.Commit(); err != nil {
@@ -98,14 +98,14 @@ func TestDB(t *testing.T) {
 
 	t.Run("test get table", func(t *testing.T) {
 		user := &Dummy{ID: 2}
-		if err := tbl.Get(db, user); err != nil {
+		if err := tbl.Get(db, "", user); err != nil {
 			t.Fatal(err)
 		}
 	})
 
 	t.Run("test gets table", func(t *testing.T) {
 		temp := &Dummy{}
-		data, _, err := tbl.Gets(db, temp, nil)
+		data, _, err := tbl.Gets(db, "", temp, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -123,7 +123,7 @@ func TestDB(t *testing.T) {
 			Sort: "id DESC",
 		}
 		temp := &Dummy{}
-		data, _, err := tbl.Gets(db, temp, &cursor)
+		data, _, err := tbl.Gets(db, "", temp, &cursor)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -142,7 +142,113 @@ func TestDB(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, item := range temp {
-			if err = tbl.Delete(tx, item); err != nil {
+			if err = tbl.Delete(tx, "", item); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	schema := "coba_scehma"
+	t.Run("test create schema", func(t *testing.T) {
+		query := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", schema)
+		if _, err := db.Exec(query); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("test create schema table", func(t *testing.T) {
+		query := fmt.Sprintf(`CREATE TABLE %s.users(
+			id serial primary key,
+			username varchar(60),
+			password text
+		);`, schema)
+		if _, err := db.Exec(query); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("test insert schema table", func(t *testing.T) {
+		tx, err := db.Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, item := range temp {
+			if err = tbl.Insert(tx, schema, item); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("test update schema table", func(t *testing.T) {
+		du := map[string]interface{}{
+			"password": "asd",
+			"username": "asd2",
+		}
+		tx, err := db.Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := tbl.Update(tx, schema, temp[0], du); err != nil {
+			t.Fatal(err)
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("test get schema table", func(t *testing.T) {
+		user := &Dummy{ID: 2}
+		if err := tbl.Get(db, schema, user); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("test gets schema table", func(t *testing.T) {
+		temp := &Dummy{}
+		data, _, err := tbl.Gets(db, schema, temp, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		result := make([]*Dummy, len(data))
+		for index, item := range data {
+			result[index] = item.(*Dummy)
+		}
+		for _, item := range result {
+			fmt.Println(item)
+		}
+	})
+
+	t.Run("test gets schema table with params sort", func(t *testing.T) {
+		cursor := Cursor{
+			Sort: "id DESC",
+		}
+		temp := &Dummy{}
+		data, _, err := tbl.Gets(db, schema, temp, &cursor)
+		if err != nil {
+			t.Fatal(err)
+		}
+		result := make([]*Dummy, len(data))
+		for index, item := range data {
+			result[index] = item.(*Dummy)
+		}
+		for _, item := range result {
+			fmt.Println(item)
+		}
+	})
+
+	t.Run("test delete schema table", func(t *testing.T) {
+		tx, err := db.Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, item := range temp {
+			if err = tbl.Delete(tx, schema, item); err != nil {
 				t.Fatal(err)
 			}
 		}

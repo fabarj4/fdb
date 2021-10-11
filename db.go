@@ -60,13 +60,13 @@ func Connect(user, password, dbName string) (*sql.DB, error) {
 }
 
 //Insert : fungsi ini digunakan untuk memasukan data ke Table
-func (t *Table) Insert(db QueryExecer, item interface{}) error {
+func (t *Table) Insert(db QueryExecer, schema string, item interface{}) error {
 
 	if t.AutoIncrement && t.ReturningID {
 		if err := t.getArgs(item, true); err != nil {
 			return err
 		}
-		query := fmt.Sprintf("INSERT INTO %s(%s) VALUES %s RETURNING %s", t.Name, strings.Join(t.getFieldWithoutPrimary(), ","), FieldsToVariables(t.Fields, true), t.PrimaryKey)
+		query := fmt.Sprintf("INSERT INTO %s(%s) VALUES %s RETURNING %s", t.tableName(schema), strings.Join(t.getFieldWithoutPrimary(), ","), FieldsToVariables(t.Fields, true), t.PrimaryKey)
 		if err := db.QueryRow(query, t.DstFields[0:len(t.DstFields)-1]...).Scan(t.DstFields[len(t.DstFields)-1]); err != nil {
 			return err
 		}
@@ -75,23 +75,23 @@ func (t *Table) Insert(db QueryExecer, item interface{}) error {
 	if err := t.getArgs(item, false); err != nil {
 		return err
 	}
-	query := fmt.Sprintf("INSERT INTO %s VALUES %s", t.Name, FieldsToVariables(t.Fields, false))
+	query := fmt.Sprintf("INSERT INTO %s VALUES %s", t.tableName(schema), FieldsToVariables(t.Fields, false))
 	_, err := db.Query(query, t.DstFields...)
 	return err
 }
 
 //Delete : fungsi ini digunakan untuk menghapus data ke Table
-func (t *Table) Delete(db QueryExecer, item interface{}) error {
+func (t *Table) Delete(db QueryExecer, schema string, item interface{}) error {
 	if err := t.getArgs(item, false); err != nil {
 		return err
 	}
-	query := fmt.Sprintf("DELETE FROM %s WHERE %s = $1", t.Name, t.PrimaryKey)
+	query := fmt.Sprintf("DELETE FROM %s WHERE %s = $1", t.tableName(schema), t.PrimaryKey)
 	_, err := db.Exec(query, t.DstPrimary)
 	return err
 }
 
 //Update : fungsi ini digunakan untuk mengubah data ke Table
-func (t *Table) Update(db QueryExecer, item interface{}, data map[string]interface{}) error {
+func (t *Table) Update(db QueryExecer, schema string, item interface{}, data map[string]interface{}) error {
 	if err := t.getArgs(item, false); err != nil {
 		return err
 	}
@@ -106,17 +106,17 @@ func (t *Table) Update(db QueryExecer, item interface{}, data map[string]interfa
 		i++
 	}
 	dataUpdate := strings.Join(kolom, " ,")
-	query := fmt.Sprintf("UPDATE %s SET %s WHERE %s = $1", t.Name, dataUpdate, t.PrimaryKey)
+	query := fmt.Sprintf("UPDATE %s SET %s WHERE %s = $1", t.tableName(schema), dataUpdate, t.PrimaryKey)
 	_, err := db.Exec(query, args...)
 	return err
 }
 
 //Get : fungsi ini digunakan untuk mengambil data berdasarkan primary key
-func (t *Table) Get(db QueryExecer, item interface{}) error {
+func (t *Table) Get(db QueryExecer, schema string, item interface{}) error {
 	if err := t.getArgs(item, false); err != nil {
 		return err
 	}
-	query := fmt.Sprintf("SELECT * FROM %v WHERE %v = $1 ", t.Name, t.PrimaryKey)
+	query := fmt.Sprintf("SELECT * FROM %v WHERE %v = $1 ", t.tableName(schema), t.PrimaryKey)
 	err := db.QueryRow(query, t.DstFields[t.DstPrimaryIndex]).Scan(t.DstFields...)
 	if err != nil {
 		return err
@@ -125,7 +125,7 @@ func (t *Table) Get(db QueryExecer, item interface{}) error {
 }
 
 //Gets : fungsi ini digunakan untuk mengambil data seluruh tabel
-func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}, string, error) {
+func (t *Table) Gets(db QueryExecer, schema string, item interface{}, c *Cursor) ([]interface{}, string, error) {
 	var kolom = []string{}
 	var args []interface{}
 	var addOnsQuery []string
@@ -178,9 +178,9 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 	}
 	var query string
 	if defultSort != "" {
-		query = fmt.Sprintf("SELECT * FROM %s %s", t.Name, defultSort)
+		query = fmt.Sprintf("SELECT * FROM %s %s", t.tableName(schema), defultSort)
 	} else {
-		query = fmt.Sprintf("SELECT * FROM %s %s", t.Name, strings.Join(addOnsQuery, " "))
+		query = fmt.Sprintf("SELECT * FROM %s %s", t.tableName(schema), strings.Join(addOnsQuery, " "))
 	}
 	data, err := db.Query(query, args...)
 	if err != nil {
@@ -190,7 +190,7 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 	var result []interface{}
 
 	for data.Next() {
-		temp := Clone(item)
+		temp := clone(item)
 		if err := t.getArgs(temp, false); err != nil {
 			return nil, "", err
 		}
@@ -209,7 +209,7 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 }
 
 // Clone : fungsi ini untuk menduplikat variable dengan alamat memori yang berbeda
-func Clone(data interface{}) interface{} {
+func clone(data interface{}) interface{} {
 	result := reflect.New(reflect.TypeOf(data).Elem())
 	val := reflect.ValueOf(data).Elem()
 	resultVal := result.Elem()
@@ -261,6 +261,13 @@ func (t *Table) getFieldWithoutPrimary() []string {
 		if value != t.PrimaryKey {
 			result = append(result, value)
 		}
+	}
+	return result
+}
+func (t *Table) tableName(schema string) string {
+	result := t.Name
+	if schema != "" {
+		result = fmt.Sprintf("%s.%s", schema, t.Name)
 	}
 	return result
 }
