@@ -231,6 +231,9 @@ func (t *Table) getArgs(item interface{}, primaryNotInclude bool) error {
 	var result []interface{}
 
 	for i := 0; i < reflectValue.NumField(); i++ {
+		if reflectType.Field(i).Tag.Get("fdb") == "-" {
+			continue
+		}
 		re, err := regexp.Compile(`[^\w]`)
 		if err != nil {
 			return err

@@ -11,6 +11,7 @@ type Dummy struct {
 	ID       int
 	Username string
 	Password string
+	Coba     string `fdb:"-"`
 }
 
 func TestDB(t *testing.T) {
