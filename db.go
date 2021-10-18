@@ -63,7 +63,7 @@ func Connect(user, password, dbName string) (*sql.DB, error) {
 func (t *Table) Insert(db QueryExecer, schema string, item interface{}) error {
 
 	if t.AutoIncrement && t.ReturningID {
-		if err := t.getArgs(item, true); err != nil {
+		if err := t.getArgs(item, true, true); err != nil {
 			return err
 		}
 		query := fmt.Sprintf("INSERT INTO %s(%s) VALUES %s RETURNING %s", t.tableName(schema), strings.Join(t.getFieldWithoutPrimary(), ","), FieldsToVariables(t.Fields, true), t.PrimaryKey)
@@ -72,7 +72,7 @@ func (t *Table) Insert(db QueryExecer, schema string, item interface{}) error {
 		}
 		return nil
 	}
-	if err := t.getArgs(item, false); err != nil {
+	if err := t.getArgs(item, false, true); err != nil {
 		return err
 	}
 	query := fmt.Sprintf("INSERT INTO %s VALUES %s", t.tableName(schema), FieldsToVariables(t.Fields, false))
@@ -82,7 +82,7 @@ func (t *Table) Insert(db QueryExecer, schema string, item interface{}) error {
 
 //Delete : fungsi ini digunakan untuk menghapus data ke Table
 func (t *Table) Delete(db QueryExecer, schema string, item interface{}) error {
-	if err := t.getArgs(item, false); err != nil {
+	if err := t.getArgs(item, false, false); err != nil {
 		return err
 	}
 	query := fmt.Sprintf("DELETE FROM %s WHERE %s = $1", t.tableName(schema), t.PrimaryKey)
@@ -92,7 +92,7 @@ func (t *Table) Delete(db QueryExecer, schema string, item interface{}) error {
 
 //Update : fungsi ini digunakan untuk mengubah data ke Table
 func (t *Table) Update(db QueryExecer, schema string, item interface{}, data map[string]interface{}) error {
-	if err := t.getArgs(item, false); err != nil {
+	if err := t.getArgs(item, false, false); err != nil {
 		return err
 	}
 	var kolom = []string{}
@@ -113,7 +113,7 @@ func (t *Table) Update(db QueryExecer, schema string, item interface{}, data map
 
 //Get : fungsi ini digunakan untuk mengambil data berdasarkan primary key
 func (t *Table) Get(db QueryExecer, schema string, item interface{}) error {
-	if err := t.getArgs(item, false); err != nil {
+	if err := t.getArgs(item, false, false); err != nil {
 		return err
 	}
 	query := fmt.Sprintf("SELECT * FROM %v WHERE %v = $1 ", t.tableName(schema), t.PrimaryKey)
@@ -191,7 +191,7 @@ func (t *Table) Gets(db QueryExecer, schema string, item interface{}, c *Cursor)
 
 	for data.Next() {
 		temp := clone(item)
-		if err := t.getArgs(temp, false); err != nil {
+		if err := t.getArgs(temp, false, false); err != nil {
 			return nil, "", err
 		}
 		if err = data.Scan(t.DstFields...); err != nil {
@@ -220,7 +220,7 @@ func clone(data interface{}) interface{} {
 }
 
 //getArgs : fungsi ini digunakan untuk menemukan data argumen (value) pada struct
-func (t *Table) getArgs(item interface{}, primaryNotInclude bool) error {
+func (t *Table) getArgs(item interface{}, primaryNotInclude, validateCheck bool) error {
 	reflectValue := reflect.ValueOf(item)
 	if reflectValue.Kind() == reflect.Ptr {
 		reflectValue = reflectValue.Elem()
@@ -231,8 +231,30 @@ func (t *Table) getArgs(item interface{}, primaryNotInclude bool) error {
 	var result []interface{}
 
 	for i := 0; i < reflectValue.NumField(); i++ {
-		if reflectType.Field(i).Tag.Get("fdb") == "-" {
+		rawTags := reflectType.Field(i).Tag.Get("fdb")
+		if rawTags == "-" {
 			continue
+		} else if rawTags != "" {
+			tags := strings.Split(rawTags, ";")
+			for _, tag := range tags {
+				tempTag := strings.Split(tag, ":")
+				if len(tempTag) != 2 {
+					return fmt.Errorf("format tags salah pada field : %v", reflectType.Field(i).Name)
+				}
+				if tempTag[len(tempTag)-1] == "" {
+					return fmt.Errorf("value tag kososng pada field : %v", reflectType.Field(i).Name)
+				}
+				switch tempTag[0] {
+				case "validate":
+					validate, err := strconv.ParseBool(tempTag[len(tempTag)-1])
+					if err != nil {
+						return err
+					}
+					if validateCheck && validate && reflect.ValueOf(reflectValue.Field(i).Interface()).IsZero() {
+						return fmt.Errorf("value field %s tidak boleh kosong", reflectType.Field(i).Name)
+					}
+				}
+			}
 		}
 		re, err := regexp.Compile(`[^\w]`)
 		if err != nil {

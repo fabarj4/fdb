@@ -10,7 +10,8 @@ import (
 type Dummy struct {
 	ID       int
 	Username string
-	Password string
+	Password string `fdb:"validate:true"`
+	Jumlah   float32
 	Coba     string `fdb:"-"`
 }
 
@@ -49,7 +50,7 @@ func TestDB(t *testing.T) {
 	tbl := &Table{
 		Name:          "users",
 		PrimaryKey:    "id",
-		Fields:        []string{"id", "username", "password"},
+		Fields:        []string{"id", "username", "password", "jumlah"},
 		ReturningID:   true,
 		AutoIncrement: true,
 	}
@@ -58,7 +59,8 @@ func TestDB(t *testing.T) {
 		query := `CREATE TABLE users(
 			id serial primary key,
 			username varchar(60),
-			password text
+			password text,
+			jumlah NUMERIC
 		);`
 		if _, err := db.Exec(query); err != nil {
 			t.Fatal(err)
@@ -164,7 +166,8 @@ func TestDB(t *testing.T) {
 		query := fmt.Sprintf(`CREATE TABLE %s.users(
 			id serial primary key,
 			username varchar(60),
-			password text
+			password text,
+			jumlah numeric
 		);`, schema)
 		if _, err := db.Exec(query); err != nil {
 			t.Fatal(err)
