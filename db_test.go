@@ -8,7 +8,7 @@ import (
 )
 
 type Dummy struct {
-	ID       int     `fdb:"fieldName:id;fieldType:SERIAL;primarykey:true"`
+	ID       int     `fdb:"fieldName:id;fieldType:SERIAL;primaryKey:true"`
 	Username string  `fdb:"validate:true;fieldName:username;fieldType:VARCHAR;fieldLength:60"`
 	Password string  `fdb:"validate:true;fieldName:password;fieldType:TEXT" json:"password"`
 	Jumlah   float32 `fdb:"fieldName:jumlah;fieldType:NUMERIC"`

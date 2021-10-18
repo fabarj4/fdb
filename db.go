@@ -82,7 +82,7 @@ func (t *Table) Create(db QueryExecer, item interface{}) error {
 	return nil
 }
 
-//setup : fungsi ini digunakan untuk mengambil data fields,primarykey, nama dari struct yang didaftarkan
+//setup : fungsi ini digunakan untuk mengambil data fields,primaryKey, nama dari struct yang didaftarkan
 func (t *Table) Setup(item interface{}) error {
 	if t.Name == "" {
 		t.Name = strings.ToLower(reflect.TypeOf(item).Elem().Name())
@@ -122,7 +122,7 @@ func (t *Table) Setup(item interface{}) error {
 						t.AutoIncrement = true
 						t.ReturningID = true
 					}
-				case "primarykey":
+				case "primaryKey":
 					primaryCheck = true
 				}
 			}
@@ -398,7 +398,7 @@ func (t *Table) getQueryCreate(item interface{}) ([]string, error) {
 					field.Type = tempTag[1]
 				case "fieldLength":
 					field.Length = tempTag[1]
-				case "primarykey":
+				case "primaryKey":
 					field.PrimaryKey = true
 				}
 			}
