@@ -59,6 +59,78 @@ func Connect(user, password, dbName string) (*sql.DB, error) {
 	return db, err
 }
 
+//Create : fungsi ini digunakan untuk membuat tabel
+func (t *Table) Create(db QueryExecer, item interface{}, tableName string) error {
+	queryFields, err := t.getQueryCreate(item)
+	if err != nil {
+		return err
+	}
+	if tableName == "" {
+		tableName = strings.ToLower(reflect.TypeOf(item).Elem().Name())
+	}
+	query := fmt.Sprintf("CREATE TABLE %s(%s);", tableName, strings.Join(queryFields, ","))
+	if _, err := db.Exec(query); err != nil {
+		return err
+	}
+	return nil
+}
+
+//setup : fungsi ini digunakan untuk mengambil data fields,primarykey, nama dari struct yang didaftarkan
+func (t *Table) Setup(item interface{}, tableName string) error {
+	t.Name = tableName
+	if tableName == "" {
+		t.Name = strings.ToLower(reflect.TypeOf(item).Elem().Name())
+	}
+
+	reflectValue := reflect.ValueOf(item)
+	if reflectValue.Kind() == reflect.Ptr {
+		reflectValue = reflectValue.Elem()
+	}
+
+	var reflectType = reflectValue.Type()
+	for i := 0; i < reflectValue.NumField(); i++ {
+		rawTags := reflectType.Field(i).Tag.Get("fdb")
+		if rawTags == "-" {
+			continue
+		} else if rawTags != "" {
+			tags := strings.Split(rawTags, ";")
+			check := false
+			if strings.Contains(rawTags, "fieldName") && strings.Contains(rawTags, "fieldType") {
+				check = true
+			}
+			field := ""
+			primaryCheck := false
+			for _, tag := range tags {
+				tempTag := strings.Split(tag, ":")
+				if len(tempTag) != 2 {
+					return fmt.Errorf("format tags salah pada field : %v", reflectType.Field(i).Name)
+				}
+				if tempTag[len(tempTag)-1] == "" {
+					return fmt.Errorf("value tag kososng pada field : %v", reflectType.Field(i).Name)
+				}
+				switch tempTag[0] {
+				case "fieldName":
+					field = tempTag[1]
+				case "fieldType":
+					if strings.ToLower(tempTag[1]) == "serial" {
+						t.AutoIncrement = true
+						t.ReturningID = true
+					}
+				case "primarykey":
+					primaryCheck = true
+				}
+			}
+			if check {
+				t.Fields = append(t.Fields, field)
+				if primaryCheck {
+					t.PrimaryKey = field
+				}
+			}
+		}
+	}
+	return nil
+}
+
 //Insert : fungsi ini digunakan untuk memasukan data ke Table
 func (t *Table) Insert(db QueryExecer, schema string, item interface{}) error {
 
@@ -276,6 +348,71 @@ func (t *Table) getArgs(item interface{}, primaryNotInclude, validateCheck bool)
 	}
 	t.DstFields = result
 	return nil
+}
+
+//getArgs : fungsi ini digunakan untuk menemukan data argumen (value) pada struct
+func (t *Table) getQueryCreate(item interface{}) ([]string, error) {
+	reflectValue := reflect.ValueOf(item)
+	if reflectValue.Kind() == reflect.Ptr {
+		reflectValue = reflectValue.Elem()
+	}
+
+	var reflectType = reflectValue.Type()
+	type FieldConstructor struct {
+		Name       string
+		Length     string
+		Type       string
+		PrimaryKey bool
+	}
+
+	var fields []*FieldConstructor
+	for i := 0; i < reflectValue.NumField(); i++ {
+		rawTags := reflectType.Field(i).Tag.Get("fdb")
+		if rawTags == "-" {
+			continue
+		} else if rawTags != "" {
+			tags := strings.Split(rawTags, ";")
+			field := &FieldConstructor{}
+			check := false
+			if strings.Contains(rawTags, "fieldName") && strings.Contains(rawTags, "fieldType") {
+				check = true
+			}
+			for _, tag := range tags {
+				tempTag := strings.Split(tag, ":")
+				if len(tempTag) != 2 {
+					return nil, fmt.Errorf("format tags salah pada field : %v", reflectType.Field(i).Name)
+				}
+				if tempTag[len(tempTag)-1] == "" {
+					return nil, fmt.Errorf("value tag kososng pada field : %v", reflectType.Field(i).Name)
+				}
+				switch tempTag[0] {
+				case "fieldName":
+					field.Name = tempTag[1]
+				case "fieldType":
+					field.Type = tempTag[1]
+				case "fieldLength":
+					field.Length = tempTag[1]
+				case "primarykey":
+					field.PrimaryKey = true
+				}
+			}
+			if check {
+				fields = append(fields, field)
+			}
+		}
+	}
+	var queryFields []string
+	for _, field := range fields {
+		queryField := fmt.Sprintf("%s %s", field.Name, field.Type)
+		if field.Length != "" {
+			queryField = fmt.Sprintf("%s %s(%s)", field.Name, field.Type, field.Length)
+		}
+		if field.PrimaryKey {
+			queryField += fmt.Sprintf(" PRIMARY KEY")
+		}
+		queryFields = append(queryFields, queryField)
+	}
+	return queryFields, nil
 }
 
 // getFieldWithoutPrimary : fungsi ini digunakan untuk mendapatkan susunan field tanpa primary key
