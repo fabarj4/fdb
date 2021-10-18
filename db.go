@@ -287,6 +287,7 @@ func (t *Table) setup(item interface{}, primaryNotInclude, validateCheck bool) e
 					}
 				case "fieldName":
 					field = tempTag[1]
+				case "fieldLength":
 				case "fieldType":
 					if strings.ToLower(tempTag[1]) == "serial" {
 						t.AutoIncrement = true
@@ -300,6 +301,8 @@ func (t *Table) setup(item interface{}, primaryNotInclude, validateCheck bool) e
 					if checked {
 						primaryCheck = true
 					}
+				default:
+					return fmt.Errorf("perintah tidak dikenal : %s pada atribut : %s", tempTag[0], reflectType.Field(i).Name)
 				}
 			}
 			if check {
@@ -368,6 +371,7 @@ func (t *Table) getQueryCreate(item interface{}) ([]string, error) {
 					return nil, fmt.Errorf("value tag kososng pada field : %v", reflectType.Field(i).Name)
 				}
 				switch tempTag[0] {
+				case "validate":
 				case "fieldName":
 					field.Name = tempTag[1]
 				case "fieldType":
@@ -382,6 +386,8 @@ func (t *Table) getQueryCreate(item interface{}) ([]string, error) {
 					if checked {
 						field.PrimaryKey = true
 					}
+				default:
+					return nil, fmt.Errorf("perintah tidak dikenal : %s pada atribut : %s", tempTag[0], reflectType.Field(i).Name)
 				}
 			}
 			if check {
