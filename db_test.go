@@ -51,10 +51,6 @@ func TestDB(t *testing.T) {
 		Name: "users",
 	}
 
-	if err := tbl.Setup(&Dummy{}); err != nil {
-		t.Fatal(err)
-	}
-
 	t.Run("test create table", func(t *testing.T) {
 		if err := tbl.Create(db, &Dummy{}); err != nil {
 			t.Fatal(err)

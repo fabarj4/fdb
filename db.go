@@ -82,66 +82,13 @@ func (t *Table) Create(db QueryExecer, item interface{}) error {
 	return nil
 }
 
-//setup : fungsi ini digunakan untuk mengambil data fields,primaryKey, nama dari struct yang didaftarkan
-func (t *Table) Setup(item interface{}) error {
-	if t.Name == "" {
-		t.Name = strings.ToLower(reflect.TypeOf(item).Elem().Name())
-	}
-
-	reflectValue := reflect.ValueOf(item)
-	if reflectValue.Kind() == reflect.Ptr {
-		reflectValue = reflectValue.Elem()
-	}
-
-	var reflectType = reflectValue.Type()
-	for i := 0; i < reflectValue.NumField(); i++ {
-		rawTags := reflectType.Field(i).Tag.Get("fdb")
-		if rawTags == "-" {
-			continue
-		} else if rawTags != "" {
-			tags := strings.Split(rawTags, ";")
-			check := false
-			if strings.Contains(rawTags, "fieldName") && strings.Contains(rawTags, "fieldType") {
-				check = true
-			}
-			field := ""
-			primaryCheck := false
-			for _, tag := range tags {
-				tempTag := strings.Split(tag, ":")
-				if len(tempTag) != 2 {
-					return fmt.Errorf("format tags salah pada field : %v", reflectType.Field(i).Name)
-				}
-				if tempTag[len(tempTag)-1] == "" {
-					return fmt.Errorf("value tag kososng pada field : %v", reflectType.Field(i).Name)
-				}
-				switch tempTag[0] {
-				case "fieldName":
-					field = tempTag[1]
-				case "fieldType":
-					if strings.ToLower(tempTag[1]) == "serial" {
-						t.AutoIncrement = true
-						t.ReturningID = true
-					}
-				case "primaryKey":
-					primaryCheck = true
-				}
-			}
-			if check {
-				t.Fields = append(t.Fields, field)
-				if primaryCheck {
-					t.PrimaryKey = field
-				}
-			}
-		}
-	}
-	return nil
-}
-
 //Insert : fungsi ini digunakan untuk memasukan data ke Table
 func (t *Table) Insert(db QueryExecer, item interface{}) error {
-
+	if err := t.setup(item, false, true); err != nil {
+		return err
+	}
 	if t.AutoIncrement && t.ReturningID {
-		if err := t.getArgs(item, true, true); err != nil {
+		if err := t.setup(item, true, true); err != nil {
 			return err
 		}
 		query := fmt.Sprintf("INSERT INTO %s(%s) VALUES %s RETURNING %s", t.tableName(), strings.Join(t.getFieldWithoutPrimary(), ","), FieldsToVariables(t.Fields, true), t.PrimaryKey)
@@ -150,9 +97,7 @@ func (t *Table) Insert(db QueryExecer, item interface{}) error {
 		}
 		return nil
 	}
-	if err := t.getArgs(item, false, true); err != nil {
-		return err
-	}
+
 	query := fmt.Sprintf("INSERT INTO %s VALUES %s", t.tableName(), FieldsToVariables(t.Fields, false))
 	_, err := db.Query(query, t.DstFields...)
 	return err
@@ -160,7 +105,7 @@ func (t *Table) Insert(db QueryExecer, item interface{}) error {
 
 //Delete : fungsi ini digunakan untuk menghapus data ke Table
 func (t *Table) Delete(db QueryExecer, item interface{}) error {
-	if err := t.getArgs(item, false, false); err != nil {
+	if err := t.setup(item, false, false); err != nil {
 		return err
 	}
 	query := fmt.Sprintf("DELETE FROM %s WHERE %s = $1", t.tableName(), t.PrimaryKey)
@@ -170,7 +115,7 @@ func (t *Table) Delete(db QueryExecer, item interface{}) error {
 
 //Update : fungsi ini digunakan untuk mengubah data ke Table
 func (t *Table) Update(db QueryExecer, item interface{}, data map[string]interface{}) error {
-	if err := t.getArgs(item, false, false); err != nil {
+	if err := t.setup(item, false, false); err != nil {
 		return err
 	}
 	var kolom = []string{}
@@ -191,7 +136,7 @@ func (t *Table) Update(db QueryExecer, item interface{}, data map[string]interfa
 
 //Get : fungsi ini digunakan untuk mengambil data berdasarkan primary key
 func (t *Table) Get(db QueryExecer, item interface{}) error {
-	if err := t.getArgs(item, false, false); err != nil {
+	if err := t.setup(item, false, false); err != nil {
 		return err
 	}
 	query := fmt.Sprintf("SELECT * FROM %v WHERE %v = $1 ", t.tableName(), t.PrimaryKey)
@@ -269,7 +214,7 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 
 	for data.Next() {
 		temp := clone(item)
-		if err := t.getArgs(temp, false, false); err != nil {
+		if err := t.setup(temp, false, false); err != nil {
 			return nil, "", err
 		}
 		if err = data.Scan(t.DstFields...); err != nil {
@@ -297,23 +242,32 @@ func clone(data interface{}) interface{} {
 	return result.Interface()
 }
 
-//getArgs : fungsi ini digunakan untuk menemukan data argumen (value) pada struct
-func (t *Table) getArgs(item interface{}, primaryNotInclude, validateCheck bool) error {
+//setup : fungsi ini digunakan untuk mengambil data fields,primaryKey, nama dari struct yang didaftarkan
+func (t *Table) setup(item interface{}, primaryNotInclude, validateCheck bool) error {
+	if t.Name == "" {
+		t.Name = strings.ToLower(reflect.TypeOf(item).Elem().Name())
+	}
+	var result []interface{}
+	var fields []string
+
 	reflectValue := reflect.ValueOf(item)
 	if reflectValue.Kind() == reflect.Ptr {
 		reflectValue = reflectValue.Elem()
 	}
 
 	var reflectType = reflectValue.Type()
-
-	var result []interface{}
-
 	for i := 0; i < reflectValue.NumField(); i++ {
 		rawTags := reflectType.Field(i).Tag.Get("fdb")
 		if rawTags == "-" {
 			continue
 		} else if rawTags != "" {
 			tags := strings.Split(rawTags, ";")
+			check := false
+			if strings.Contains(rawTags, "fieldName") && strings.Contains(rawTags, "fieldType") {
+				check = true
+			}
+			field := ""
+			primaryCheck := false
 			for _, tag := range tags {
 				tempTag := strings.Split(tag, ":")
 				if len(tempTag) != 2 {
@@ -331,6 +285,27 @@ func (t *Table) getArgs(item interface{}, primaryNotInclude, validateCheck bool)
 					if validateCheck && validate && reflect.ValueOf(reflectValue.Field(i).Interface()).IsZero() {
 						return fmt.Errorf("value field %s tidak boleh kosong", reflectType.Field(i).Name)
 					}
+				case "fieldName":
+					field = tempTag[1]
+				case "fieldType":
+					if strings.ToLower(tempTag[1]) == "serial" {
+						t.AutoIncrement = true
+						t.ReturningID = true
+					}
+				case "primaryKey":
+					checked, err := strconv.ParseBool(tempTag[len(tempTag)-1])
+					if err != nil {
+						return err
+					}
+					if checked {
+						primaryCheck = true
+					}
+				}
+			}
+			if check {
+				fields = append(fields, field)
+				if primaryCheck {
+					t.PrimaryKey = field
 				}
 			}
 		}
@@ -353,10 +328,11 @@ func (t *Table) getArgs(item interface{}, primaryNotInclude, validateCheck bool)
 		result = append(result, reflectValue.Field(t.DstPrimaryIndex).Addr().Interface())
 	}
 	t.DstFields = result
+	t.Fields = fields
 	return nil
 }
 
-//getArgs : fungsi ini digunakan untuk menemukan data argumen (value) pada struct
+//getQueryCreate : fungsi ini digunakan untuk menyiapkan data untuk create table
 func (t *Table) getQueryCreate(item interface{}) ([]string, error) {
 	reflectValue := reflect.ValueOf(item)
 	if reflectValue.Kind() == reflect.Ptr {
@@ -399,7 +375,13 @@ func (t *Table) getQueryCreate(item interface{}) ([]string, error) {
 				case "fieldLength":
 					field.Length = tempTag[1]
 				case "primaryKey":
-					field.PrimaryKey = true
+					checked, err := strconv.ParseBool(tempTag[len(tempTag)-1])
+					if err != nil {
+						return nil, err
+					}
+					if checked {
+						field.PrimaryKey = true
+					}
 				}
 			}
 			if check {
