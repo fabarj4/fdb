@@ -50,6 +50,7 @@ type Table struct {
 	AutoIncrement   bool
 	Data            interface{}
 	ReturningID     bool
+	Schema          string
 }
 
 //Connect : fungsi ini digunakan untuk melakukan koneksi dengan database
@@ -60,15 +61,21 @@ func Connect(user, password, dbName string) (*sql.DB, error) {
 }
 
 //Create : fungsi ini digunakan untuk membuat tabel
-func (t *Table) Create(db QueryExecer, item interface{}, tableName string) error {
+func (t *Table) Create(db QueryExecer, item interface{}) error {
 	queryFields, err := t.getQueryCreate(item)
 	if err != nil {
 		return err
 	}
-	if tableName == "" {
-		tableName = strings.ToLower(reflect.TypeOf(item).Elem().Name())
+	if t.Name == "" {
+		t.Name = strings.ToLower(reflect.TypeOf(item).Elem().Name())
 	}
-	query := fmt.Sprintf("CREATE TABLE %s(%s);", tableName, strings.Join(queryFields, ","))
+	if t.Schema != "" {
+		query := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", t.Schema)
+		if _, err := db.Exec(query); err != nil {
+			return err
+		}
+	}
+	query := fmt.Sprintf("CREATE TABLE %s(%s);", t.tableName(), strings.Join(queryFields, ","))
 	if _, err := db.Exec(query); err != nil {
 		return err
 	}
@@ -76,9 +83,8 @@ func (t *Table) Create(db QueryExecer, item interface{}, tableName string) error
 }
 
 //setup : fungsi ini digunakan untuk mengambil data fields,primarykey, nama dari struct yang didaftarkan
-func (t *Table) Setup(item interface{}, tableName string) error {
-	t.Name = tableName
-	if tableName == "" {
+func (t *Table) Setup(item interface{}) error {
+	if t.Name == "" {
 		t.Name = strings.ToLower(reflect.TypeOf(item).Elem().Name())
 	}
 
@@ -132,13 +138,13 @@ func (t *Table) Setup(item interface{}, tableName string) error {
 }
 
 //Insert : fungsi ini digunakan untuk memasukan data ke Table
-func (t *Table) Insert(db QueryExecer, schema string, item interface{}) error {
+func (t *Table) Insert(db QueryExecer, item interface{}) error {
 
 	if t.AutoIncrement && t.ReturningID {
 		if err := t.getArgs(item, true, true); err != nil {
 			return err
 		}
-		query := fmt.Sprintf("INSERT INTO %s(%s) VALUES %s RETURNING %s", t.tableName(schema), strings.Join(t.getFieldWithoutPrimary(), ","), FieldsToVariables(t.Fields, true), t.PrimaryKey)
+		query := fmt.Sprintf("INSERT INTO %s(%s) VALUES %s RETURNING %s", t.tableName(), strings.Join(t.getFieldWithoutPrimary(), ","), FieldsToVariables(t.Fields, true), t.PrimaryKey)
 		if err := db.QueryRow(query, t.DstFields[0:len(t.DstFields)-1]...).Scan(t.DstFields[len(t.DstFields)-1]); err != nil {
 			return err
 		}
@@ -147,23 +153,23 @@ func (t *Table) Insert(db QueryExecer, schema string, item interface{}) error {
 	if err := t.getArgs(item, false, true); err != nil {
 		return err
 	}
-	query := fmt.Sprintf("INSERT INTO %s VALUES %s", t.tableName(schema), FieldsToVariables(t.Fields, false))
+	query := fmt.Sprintf("INSERT INTO %s VALUES %s", t.tableName(), FieldsToVariables(t.Fields, false))
 	_, err := db.Query(query, t.DstFields...)
 	return err
 }
 
 //Delete : fungsi ini digunakan untuk menghapus data ke Table
-func (t *Table) Delete(db QueryExecer, schema string, item interface{}) error {
+func (t *Table) Delete(db QueryExecer, item interface{}) error {
 	if err := t.getArgs(item, false, false); err != nil {
 		return err
 	}
-	query := fmt.Sprintf("DELETE FROM %s WHERE %s = $1", t.tableName(schema), t.PrimaryKey)
+	query := fmt.Sprintf("DELETE FROM %s WHERE %s = $1", t.tableName(), t.PrimaryKey)
 	_, err := db.Exec(query, t.DstPrimary)
 	return err
 }
 
 //Update : fungsi ini digunakan untuk mengubah data ke Table
-func (t *Table) Update(db QueryExecer, schema string, item interface{}, data map[string]interface{}) error {
+func (t *Table) Update(db QueryExecer, item interface{}, data map[string]interface{}) error {
 	if err := t.getArgs(item, false, false); err != nil {
 		return err
 	}
@@ -178,17 +184,17 @@ func (t *Table) Update(db QueryExecer, schema string, item interface{}, data map
 		i++
 	}
 	dataUpdate := strings.Join(kolom, " ,")
-	query := fmt.Sprintf("UPDATE %s SET %s WHERE %s = $1", t.tableName(schema), dataUpdate, t.PrimaryKey)
+	query := fmt.Sprintf("UPDATE %s SET %s WHERE %s = $1", t.tableName(), dataUpdate, t.PrimaryKey)
 	_, err := db.Exec(query, args...)
 	return err
 }
 
 //Get : fungsi ini digunakan untuk mengambil data berdasarkan primary key
-func (t *Table) Get(db QueryExecer, schema string, item interface{}) error {
+func (t *Table) Get(db QueryExecer, item interface{}) error {
 	if err := t.getArgs(item, false, false); err != nil {
 		return err
 	}
-	query := fmt.Sprintf("SELECT * FROM %v WHERE %v = $1 ", t.tableName(schema), t.PrimaryKey)
+	query := fmt.Sprintf("SELECT * FROM %v WHERE %v = $1 ", t.tableName(), t.PrimaryKey)
 	err := db.QueryRow(query, t.DstFields[t.DstPrimaryIndex]).Scan(t.DstFields...)
 	if err != nil {
 		return err
@@ -197,7 +203,7 @@ func (t *Table) Get(db QueryExecer, schema string, item interface{}) error {
 }
 
 //Gets : fungsi ini digunakan untuk mengambil data seluruh tabel
-func (t *Table) Gets(db QueryExecer, schema string, item interface{}, c *Cursor) ([]interface{}, string, error) {
+func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}, string, error) {
 	var kolom = []string{}
 	var args []interface{}
 	var addOnsQuery []string
@@ -250,9 +256,9 @@ func (t *Table) Gets(db QueryExecer, schema string, item interface{}, c *Cursor)
 	}
 	var query string
 	if defultSort != "" {
-		query = fmt.Sprintf("SELECT * FROM %s %s", t.tableName(schema), defultSort)
+		query = fmt.Sprintf("SELECT * FROM %s %s", t.tableName(), defultSort)
 	} else {
-		query = fmt.Sprintf("SELECT * FROM %s %s", t.tableName(schema), strings.Join(addOnsQuery, " "))
+		query = fmt.Sprintf("SELECT * FROM %s %s", t.tableName(), strings.Join(addOnsQuery, " "))
 	}
 	data, err := db.Query(query, args...)
 	if err != nil {
@@ -425,10 +431,10 @@ func (t *Table) getFieldWithoutPrimary() []string {
 	}
 	return result
 }
-func (t *Table) tableName(schema string) string {
+func (t *Table) tableName() string {
 	result := t.Name
-	if schema != "" {
-		result = fmt.Sprintf("%s.%s", schema, t.Name)
+	if t.Schema != "" {
+		result = fmt.Sprintf("%s.%s", t.Schema, t.Name)
 	}
 	return result
 }
