@@ -153,6 +153,9 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 	var args []interface{}
 	var addOnsQuery []string
 	var resultCursor string
+	if err := t.setup(item, false, false); err != nil {
+		return nil, "", err
+	}
 	defultSort := fmt.Sprintf(" ORDER BY %s ASC", t.PrimaryKey)
 	// var cursorData []string
 
