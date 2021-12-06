@@ -314,6 +314,8 @@ func (t *Table) setup(item interface{}, primaryNotInclude, validateCheck bool) e
 					t.PrimaryKey = field
 				}
 			}
+		} else {
+			continue
 		}
 		re, err := regexp.Compile(`[^\w]`)
 		if err != nil {

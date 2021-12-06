@@ -12,7 +12,7 @@ type Dummy struct {
 	Username string  `fdb:"validate:true;fieldName:username;fieldType:VARCHAR;fieldLength:60"`
 	Password string  `fdb:"validate:true;fieldName:password;fieldType:TEXT" json:"password"`
 	Jumlah   float32 `fdb:"fieldName:jumlah;fieldType:NUMERIC"`
-	Coba     string  `fdb:"-"`
+	Coba     string
 }
 
 func TestDB(t *testing.T) {
