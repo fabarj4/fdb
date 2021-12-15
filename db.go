@@ -139,7 +139,7 @@ func (t *Table) Get(db QueryExecer, item interface{}) error {
 	if err := t.setup(item, false, false); err != nil {
 		return err
 	}
-	query := fmt.Sprintf("SELECT * FROM %v WHERE %v = $1 ", t.tableName(), t.PrimaryKey)
+	query := fmt.Sprintf("SELECT %v FROM %v WHERE %v = $1 ", strings.Join(t.Fields, ","), t.tableName(), t.PrimaryKey)
 	err := db.QueryRow(query, t.DstFields[t.DstPrimaryIndex]).Scan(t.DstFields...)
 	if err != nil {
 		return err
