@@ -204,9 +204,9 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 	}
 	var query string
 	if defultSort != "" {
-		query = fmt.Sprintf("SELECT * FROM %s %s", t.tableName(), defultSort)
+		query = fmt.Sprintf("SELECT %v FROM %s %s", strings.Join(t.Fields, ","), t.tableName(), defultSort)
 	} else {
-		query = fmt.Sprintf("SELECT * FROM %s %s", t.tableName(), strings.Join(addOnsQuery, " "))
+		query = fmt.Sprintf("SELECT %v FROM %s %s", strings.Join(t.Fields, ","), t.tableName(), strings.Join(addOnsQuery, " "))
 	}
 	data, err := db.Query(query, args...)
 	if err != nil {
