@@ -114,7 +114,7 @@ func TestDB(t *testing.T) {
 	t.Run("test gets table with params sort", func(t *testing.T) {
 		cursor := Cursor{
 			Sort:    "id DESC",
-			Filters: "username,LIKE,%al%",
+			Filters: "username,LIKE,%al%|id,=,0",
 		}
 		temp := &Dummy{}
 		data, _, err := tbl.Gets(db, temp, &cursor)
