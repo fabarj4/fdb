@@ -10,8 +10,9 @@ func TestCursor(t *testing.T) {
 		Filters: "coba,=,1",
 		Sort:    "id ASC",
 		Limit:   "5",
+		Search:  "coba,=,1|tes,=,2",
 	}
-	cursorString := "Y29iYSw9LDEmaWQgQVNDJjUmbnVsbA=="
+	cursorString := "Y29iYSw9LDEmaWQgQVNDJjUmbnVsbCZjb2JhLD0sMXx0ZXMsPSwy"
 	t.Run("Test set Cursor", func(t *testing.T) {
 		result := cursor.SetCursor()
 		fmt.Println(result)

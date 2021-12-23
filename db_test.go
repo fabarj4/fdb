@@ -114,7 +114,26 @@ func TestDB(t *testing.T) {
 	t.Run("test gets table with params sort", func(t *testing.T) {
 		cursor := Cursor{
 			Sort:    "id DESC",
-			Filters: "username,LIKE,%al%|id,=,0",
+			Filters: "username,LIKE,%al%",
+		}
+		temp := &Dummy{}
+		data, _, err := tbl.Gets(db, temp, &cursor)
+		if err != nil {
+			t.Fatal(err)
+		}
+		result := make([]*Dummy, len(data))
+		for index, item := range data {
+			result[index] = item.(*Dummy)
+		}
+		for _, item := range result {
+			fmt.Println(item)
+		}
+	})
+
+	t.Run("test gets table with params search", func(t *testing.T) {
+		cursor := Cursor{
+			Sort:   "id DESC",
+			Search: "username,LIKE,%al%|username,LIKE,%ai%",
 		}
 		temp := &Dummy{}
 		data, _, err := tbl.Gets(db, temp, &cursor)

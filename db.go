@@ -172,6 +172,17 @@ func (t *Table) Gets(db QueryExecer, item interface{}, c *Cursor) ([]interface{}
 			}
 			addOnsQuery = append(addOnsQuery, fmt.Sprintf(" WHERE %s", strings.Join(kolom, " AND ")))
 		}
+		if c.Search != "" {
+			dataParams := strings.Split(c.Search, "|")
+			for i, v := range dataParams {
+				temp := strings.Split(v, ",")
+				where := fmt.Sprintf("%s %s $%d", strings.ToLower(temp[0]), temp[1], i+1)
+				kolom = append(kolom, where)
+				// arg, _ := url.QueryUnescape(temp[2])
+				args = append(args, temp[2])
+			}
+			addOnsQuery = append(addOnsQuery, fmt.Sprintf(" WHERE %s", strings.Join(kolom, " OR ")))
+		}
 		if c.Sort != "" {
 			dataSort := strings.Split(c.Sort, "|")
 			temp := []string{}

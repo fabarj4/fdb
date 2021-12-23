@@ -10,6 +10,7 @@ type Cursor struct {
 	Sort    string
 	Limit   string
 	Offset  string
+	Search  string
 }
 
 func MapToCursor(item map[string]interface{}) *Cursor {
@@ -25,6 +26,9 @@ func MapToCursor(item map[string]interface{}) *Cursor {
 	}
 	if item, ok := item["offset"]; ok {
 		result.Offset = item.(string)
+	}
+	if item, ok := item["search"]; ok {
+		result.Search = item.(string)
 	}
 	return result
 }
@@ -52,6 +56,11 @@ func (c *Cursor) SetCursor() string {
 	} else {
 		temp = append(temp, "null")
 	}
+	if c.Search != "" {
+		temp = append(temp, c.Search)
+	} else {
+		temp = append(temp, "null")
+	}
 	result = base64.StdEncoding.EncodeToString([]byte(strings.Join(temp, "&")))
 	return result
 }
@@ -73,6 +82,9 @@ func (c *Cursor) GetCursor(data string) error {
 	}
 	if items[3] != "null" {
 		c.Offset = items[3]
+	}
+	if items[4] != "null" {
+		c.Search = items[4]
 	}
 	return nil
 }
