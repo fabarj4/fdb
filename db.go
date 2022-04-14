@@ -53,9 +53,13 @@ type Table struct {
 	Schema          string
 }
 
-//Connect : fungsi ini digunakan untuk melakukan koneksi dengan database
-func Connect(user, password, dbName string) (*sql.DB, error) {
-	connStr := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", user, password, dbName)
+//Connect : fungsi ini digunakan untuk melakukan koneksi dengan database | host jika tidak diisi akan default ke localhost/127.0.0.1 | sslmodel dapat diisi dengan disable atau verify-full
+func Connect(user, password, dbName, host, sslmode string) (*sql.DB, error) {
+	// connStr := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", user, password, dbName)
+	if sslmode == "" {
+		sslmode = "disable"
+	}
+	connStr := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", user, password, host, dbName, sslmode)
 	db, err := sql.Open("postgres", connStr)
 	return db, err
 }
